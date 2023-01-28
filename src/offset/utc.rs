@@ -6,16 +6,30 @@
 use core::fmt;
 #[cfg(all(
     feature = "clock",
-    not(all(
-        target_arch = "wasm32",
-        feature = "wasmbind",
-        not(any(target_os = "emscripten", target_os = "wasi"))
+    not(any(
+        all(
+            target_arch = "wasm32",
+            feature = "wasmbind",
+            not(any(target_os = "emscripten", target_os = "wasi"))
+        ),
+        all(
+            target_arch = "wasm32",
+            feature = "wasi-clocks-component-preview",
+        ),
     ))
 ))]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize, Serialize};
+
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "wasi-clocks-component-preview",
+))]
+#[path = "../../wit/generated-guest/chrono.rs"]
+#[allow(unreachable_pub)]
+mod wasi_clocks;
 
 use super::{FixedOffset, LocalResult, Offset, TimeZone};
 use crate::naive::{NaiveDate, NaiveDateTime};
@@ -59,12 +73,25 @@ impl Utc {
     }
 
     /// Returns a `DateTime` which corresponds to the current date and time.
-    #[cfg(not(all(
-        target_arch = "wasm32",
-        feature = "wasmbind",
-        not(any(target_os = "emscripten", target_os = "wasi"))
-    )))]
     pub fn now() -> DateTime<Utc> {
+        Self::now_inner()
+    }
+
+    // The version of now_inner() that uses std;
+    // not used in a web wasm context,
+    // not used in a wasm context with feature "wasi-clocks-component-preview" enabled.
+    #[cfg(not(any(
+        all(
+            target_arch = "wasm32",
+            feature = "wasmbind",
+            not(any(target_os = "emscripten", target_os = "wasi"))
+        ),
+        all(
+            target_arch = "wasm32",
+            feature = "wasi-clocks-component-preview",
+        )
+    )))]
+    fn now_inner() -> DateTime<Utc> {
         let now =
             SystemTime::now().duration_since(UNIX_EPOCH).expect("system time before Unix epoch");
         let naive =
@@ -73,15 +100,29 @@ impl Utc {
         DateTime::from_utc(naive, Utc)
     }
 
-    /// Returns a `DateTime` which corresponds to the current date and time.
+    // The version of now_inner() used in a web wasm context.
     #[cfg(all(
         target_arch = "wasm32",
         feature = "wasmbind",
         not(any(target_os = "emscripten", target_os = "wasi"))
     ))]
-    pub fn now() -> DateTime<Utc> {
+    fn now_inner() -> DateTime<Utc> {
         let now = js_sys::Date::new_0();
         DateTime::<Utc>::from(now)
+    }
+
+    // The version of now_inner() used in a wasm context with feature
+    // "wasi-clocks-component-preview" enabled.
+    #[cfg(all(
+        target_arch = "wasm32",
+        feature = "wasi-clocks-component-preview",
+    ))]
+    fn now_inner() -> DateTime<Utc> {
+        let now: wasi_clocks::utc_clock::Datetime = wasi_clocks::utc_clock::now();
+        let naive =
+            NaiveDateTime::from_timestamp_opt(now.seconds as i64, now.nanoseconds as u32)
+                .unwrap();
+        DateTime::from_utc(naive, Utc)
     }
 }
 

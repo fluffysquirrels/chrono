@@ -22,7 +22,8 @@ libc = []
 std = []
 clock = ["std", "winapi", "iana-time-zone"]
 oldtime = ["time"]
-wasmbind = ["wasm-bindgen", "js-sys"]
+wasi-clocks-component-preview = [] # conflicts with "wasmbind"
+wasmbind = ["wasm-bindgen", "js-sys"] # conflicts with "wasi-clocks-component-preview"
 unstable-locales = ["pure-rust-locales", "alloc"]
 __internal_bench = ["criterion"]
 __doctest = []
@@ -43,6 +44,9 @@ arbitrary = { version = "1.0.0", features = ["derive"], optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true } # contains FFI bindings for the JS Date API
 
+# [target.'cfg(all(target_arch = "wasm32", feature = "wasi-clocks-component-preview"))'.dependencies]
+[target.'cfg(all(target_arch = "wasm32"))'.dependencies]
+wit-bindgen-guest-rust = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "98c2b1e4cb10d3757114b7524d112511a4c7459e" }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.0", features = ["std", "minwinbase", "minwindef", "timezoneapi"], optional = true }
