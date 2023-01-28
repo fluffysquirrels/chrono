@@ -28,7 +28,7 @@ use rkyv::{Archive, Deserialize, Serialize};
     feature = "wasi-clocks-component-preview",
 ))]
 #[path = "../../wit/generated-guest/chrono.rs"]
-#[allow(unreachable_pub)]
+#[allow(unreachable_pub, dead_code)]
 mod wasi_clocks;
 
 use super::{FixedOffset, LocalResult, Offset, TimeZone};
